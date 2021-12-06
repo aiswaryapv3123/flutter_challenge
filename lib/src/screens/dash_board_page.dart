@@ -221,7 +221,7 @@ class _DashBoardPageState extends State<DashBoardPage> {
                           ),
                           DotIndicator(
                               color: indicatorColors[index],
-                              label: "Free-time",
+                              label: "Free-time ",
                               time: "1h 20m"),
                           SizedBox(
                             width: MediaQuery.of(context).size.width * .03,
