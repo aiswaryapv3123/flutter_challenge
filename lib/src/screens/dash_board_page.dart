@@ -1,5 +1,8 @@
 import 'dart:convert';
 
+import 'package:challenge/src/bloc/dash_borad_bloc/dash_board_bloc.dart';
+import 'package:challenge/src/bloc/dash_borad_bloc/events.dart';
+import 'package:challenge/src/bloc/dash_borad_bloc/states.dart';
 import 'package:challenge/src/constants/constants.dart';
 import 'package:challenge/src/models/get_dashboard_data_response.dart';
 import 'package:challenge/src/widgets/custom_button.dart';
@@ -8,6 +11,7 @@ import 'package:challenge/src/widgets/dot_indicators.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class DashBoardPage extends StatefulWidget {
   // const DashBoardPage({Key? key}) : super(key: key);
@@ -50,17 +54,12 @@ class _DashBoardPageState extends State<DashBoardPage> {
   void initState() {
     // TODO: implement initState
     super.initState();
-    getData();
-    // setState((){
-    //
-    //   for(int i =0 ; i< 3; i++){
-    //     chartTime.add(data[0].chartData.studyTime.total);
-    //   }
-    //   // chartTime.add(data[0].chartData.studyTime.total);
-    //   // chartTime.add(data[0].chartData.freeTime.total);
-    // });
-    // print("Chart Time");
-    // print(chartTime);
+    // getData();
+    _loadData();
+  }
+
+  _loadData() async {
+    context.bloc<DashBoardBloc>().add(DashBoardEvents.fetchDashBoard);
   }
 
   getData() async {
@@ -194,318 +193,341 @@ class _DashBoardPageState extends State<DashBoardPage> {
         //   ),
         // ),
       ),
-      body: loading == true
-          ? Container(
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.height,
-              child: Center(
-                child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppConstants.gradients[3],
+      body: SingleChildScrollView(
+        child: Container(
+            width: MediaQuery.of(context).size.width,
+            padding: EdgeInsets.symmetric(
+              horizontal: MediaQuery.of(context).size.width * 0.08,
+            ),
+            child: BlocBuilder<DashBoardBloc, DashBoardState>(
+                builder: (BuildContext context, DashBoardState state) {
+              if (state is DashBoardError) {
+                final error = state.error;
+                return Container(
+                  width: MediaQuery.of(context).size.width,
+                  height: MediaQuery.of(context).size.height*0.8,
+                  child: Center(
+                    child: Text(error.message,style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppConstants.gradients[7],
+                        fontFamily: "EuclidCircularB"),),
+                  ),
+                );
+              }
+              if (state is DashBoardLoaded) {
+                List<GetDashboardDataResponse> dashBoardData =
+                    state.dashBoardData;
+                return dashBoardWidget(dashBoardData);
+              } else
+                return Container(
+                  width: MediaQuery.of(context).size.width,
+                  height: MediaQuery.of(context).size.height*0.8,
+                  child: Center(
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          AppConstants.gradients[3],
+                        ),
+                      ),
                     ),
                   ),
-                ),
-              ),
-            )
-          : SingleChildScrollView(
-              child: Container(
-                width: MediaQuery.of(context).size.width,
-                padding: EdgeInsets.symmetric(
-                  horizontal: MediaQuery.of(context).size.width * 0.08,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                );
+            })),
+      ),
+    );
+  }
+
+  Widget dashBoardWidget(List<GetDashboardDataResponse> dashBoardData) {
+    return Container(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            height: MediaQuery.of(context).size.width * .05,
+          ),
+          Text(
+            "Dashboard",
+            style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: AppConstants.gradients[1],
+                fontFamily: "EuclidCircularB"),
+          ),
+          SizedBox(
+            height: MediaQuery.of(context).size.width * .10,
+          ),
+          Stack(
+            children: [
+              CircularPercentIndicator(
+                radius: 200.0,
+                lineWidth: MediaQuery.of(context).size.width * .035,
+                animation: false,
+                percent: (double.parse(
+                        dashBoardData[0].chartData.classTime.total) /
+                    double.parse(dashBoardData[0].chartData.totalTime.total)),
+                startAngle: 180,
+                center: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    Text(
+                      "Total",
+                      style: TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 20.0),
+                    ),
                     SizedBox(
-                      height: MediaQuery.of(context).size.width * .05,
+                      height: MediaQuery.of(context).size.width * .03,
                     ),
                     Text(
-                      "Dashboard",
+                      getTimeString(int.parse(
+                          dashBoardData[0].chartData.totalTime.total)),
                       style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold,
-                          color: AppConstants.gradients[1],
-                          fontFamily: "EuclidCircularB"),
-                    ),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.width * .10,
-                    ),
-                    Stack(
-                      children: [
-                        CircularPercentIndicator(
-                          radius: 200.0,
-                          lineWidth: MediaQuery.of(context).size.width * .035,
-                          animation: false,
-                          percent: (double.parse(
-                                  data[0].chartData.classTime.total) /
-                              double.parse(data[0].chartData.totalTime.total)),
-                          startAngle: 180,
-                          center: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "Total",
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 20.0),
-                              ),
-                              SizedBox(
-                                height: MediaQuery.of(context).size.width * .03,
-                              ),
-                              Text(
-                                getTimeString(int.parse(
-                                    data[0].chartData.totalTime.total)),
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w400,
-                                    fontSize: 27.0),
-                              ),
-                            ],
-                          ),
-                          circularStrokeCap: CircularStrokeCap.round,
-                          progressColor: AppConstants.gradients[7],
-                          backgroundColor: AppConstants.gradients[4],
-                        ),
-                        CircularPercentIndicator(
-                          radius: 200.0,
-                          lineWidth: MediaQuery.of(context).size.width * .035,
-                          animation: false,
-                          percent: (double.parse(
-                                  data[0].chartData.studyTime.total) /
-                              double.parse(data[0].chartData.totalTime.total)),
-                          startAngle: 180,
-                          circularStrokeCap: CircularStrokeCap.round,
-                          progressColor: AppConstants.gradients[5],
-                          backgroundColor: Colors.transparent,
-                        ),
-                      ],
-                    ),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.width * .10,
-                    ),
-                    Container(
-                      width: MediaQuery.of(context).size.width,
-                      height: MediaQuery.of(context).size.width * .20,
-                      child: Center(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            // Spacer(),
-                            SizedBox(
-                              width: MediaQuery.of(context).size.width * .03,
-                            ),
-                            DotIndicator(
-                                color: chartColors[0],
-                                label: chartLabels[0],
-                                time: getTimeString(int.parse(
-                                    data[0].chartData.classTime.total))),
-                            SizedBox(
-                              width: MediaQuery.of(context).size.width * .03,
-                            ),
-                            DotIndicator(
-                                color: chartColors[1],
-                                label: chartLabels[1],
-                                time: getTimeString(int.parse(
-                                    data[0].chartData.studyTime.total))),
-                            SizedBox(
-                              width: MediaQuery.of(context).size.width * .03,
-                            ),
-                            DotIndicator(
-                                color: chartColors[2],
-                                label: chartLabels[2],
-                                time: getTimeString(int.parse(
-                                    data[0].chartData.freeTime.total))),
-                            SizedBox(
-                              width: MediaQuery.of(context).size.width * .03,
-                            ),
-                            // Spacer(),
-                          ],
-                        ),
-                        // child: ListView.builder(
-                        //   itemCount: 3,
-                        //   shrinkWrap: true,
-                        //   physics: NeverScrollableScrollPhysics(),
-                        //   scrollDirection: Axis.horizontal,
-                        //   itemBuilder: (BuildContext context, int index) {
-                        //     return Row(
-                        //       crossAxisAlignment: CrossAxisAlignment.center,
-                        //       mainAxisAlignment: MainAxisAlignment.center,
-                        //       children: [
-                        //         // Spacer(),
-                        //         SizedBox(
-                        //           width: MediaQuery.of(context).size.width * .03,
-                        //         ),
-                        //         DotIndicator(
-                        //             color: chartColors[index],
-                        //             label: chartLabels[index],
-                        //             time: "50m"),
-                        //         SizedBox(
-                        //           width: MediaQuery.of(context).size.width * .03,
-                        //         ),
-                        //         // Spacer(),
-                        //       ],
-                        //     );
-                        //   },
-                        // ),
-                      ),
-                    ),
-                    Divider(color: Colors.grey.shade300),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.width * .04,
-                    ),
-                    Text(
-                      "Free-time Usage",
-                      style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w500,
-                          color: AppConstants.gradients[1],
-                          fontFamily: "EuclidCircularB"),
-                    ),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.width * .10,
-                    ),
-                    Container(
-                      width: MediaQuery.of(context).size.width,
-                      child: Row(
-                        children: [
-                          Text(
-                            "Used",
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppConstants.gradients[1],
-                                fontFamily: "EuclidCircularB"),
-                          ),
-                          Spacer(),
-                          Text(
-                            "Max",
-                            style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppConstants.gradients[1],
-                                fontFamily: "EuclidCircularB"),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.width * .02,
-                    ),
-                    Container(
-                      width: MediaQuery.of(context).size.width,
-                      child: Row(
-                        children: [
-                          Text(
-                            getTimeString(
-                                int.parse(data[0].chartData.freeTime.total)),
-                            style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w700,
-                                color: AppConstants.gradients[2],
-                                fontFamily: "EuclidCircularB"),
-                          ),
-                          Spacer(),
-                          Text(
-                            getTimeString(int.parse(data[0].freeTimeMaxUsage)),
-                            style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w600,
-                                color: AppConstants.gradients[1],
-                                fontFamily: "EuclidCircularB"),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.width * .025,
-                    ),
-                    LinearPercentIndicator(
-                      width: MediaQuery.of(context).size.width * 0.84,
-                      animation: true,
-                      lineHeight: MediaQuery.of(context).size.width * 0.05,
-                      animationDuration: 1000,
-                      percent: (double.parse(data[0].chartData.freeTime.total) /
-                          double.parse(data[0].freeTimeMaxUsage)),
-                      center: Text(""),
-                      linearStrokeCap: LinearStrokeCap.roundAll,
-                      progressColor: AppConstants.gradients[4],
-                      backgroundColor: AppConstants.gradients[6],
-                    ),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.width * .06,
-                    ),
-                    CustomButton(
-                        label: "Extend Free-time",
-                        isDisabled: !select,
-                        onPressed: () {
-                          setState(() {
-                            select = false;
-                          });
-                        }),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.width * .04,
-                    ),
-                    CustomButton(
-                        label: "Change Time Restrictions",
-                        isDisabled: select,
-                        onPressed: () {
-                          setState(() {
-                            select = true;
-                          });
-                        }),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.width * .02,
-                    ),
-                    Divider(color: Colors.grey.shade300),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.width * .04,
-                    ),
-                    Text(
-                      "By Devices",
-                      style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w500,
-                          color: AppConstants.gradients[1],
-                          fontFamily: "EuclidCircularB"),
-                    ),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.width * .10,
-                    ),
-                    DeviceTile(
-                        image: "assets/images/mobile.svg",
-                        type: "Phone",
-                        time: getTimeString(
-                            int.parse(data[0].deviceUsage.totalTime.mobile))),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.width * .10,
-                    ),
-                    DeviceTile(
-                        image: "assets/images/laptop.svg",
-                        type: "Laptop",
-                        time: getTimeString(
-                            int.parse(data[0].deviceUsage.totalTime.laptop))),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.width * .1,
-                    ),
-                    Text(
-                      "See All Devices",
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          color: AppConstants.gradients[7],
-                          fontFamily: "EuclidCircularB"),
-                    ),
-                    SizedBox(
-                      height: MediaQuery.of(context).size.width * .10,
+                          fontWeight: FontWeight.w400, fontSize: 27.0),
                     ),
                   ],
                 ),
+                circularStrokeCap: CircularStrokeCap.round,
+                progressColor: AppConstants.gradients[7],
+                backgroundColor: AppConstants.gradients[4],
               ),
+              CircularPercentIndicator(
+                radius: 200.0,
+                lineWidth: MediaQuery.of(context).size.width * .035,
+                animation: false,
+                percent: (double.parse(
+                        dashBoardData[0].chartData.studyTime.total) /
+                    double.parse(dashBoardData[0].chartData.totalTime.total)),
+                startAngle: 180,
+                circularStrokeCap: CircularStrokeCap.round,
+                progressColor: AppConstants.gradients[5],
+                backgroundColor: Colors.transparent,
+              ),
+            ],
+          ),
+          SizedBox(
+            height: MediaQuery.of(context).size.width * .10,
+          ),
+          Container(
+            width: MediaQuery.of(context).size.width,
+            height: MediaQuery.of(context).size.width * .20,
+            child: Center(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Spacer(),
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * .03,
+                  ),
+                  DotIndicator(
+                      color: chartColors[0],
+                      label: chartLabels[0],
+                      time: getTimeString(int.parse(
+                          dashBoardData[0].chartData.classTime.total))),
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * .03,
+                  ),
+                  DotIndicator(
+                      color: chartColors[1],
+                      label: chartLabels[1],
+                      time: getTimeString(int.parse(
+                          dashBoardData[0].chartData.studyTime.total))),
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * .03,
+                  ),
+                  DotIndicator(
+                      color: chartColors[2],
+                      label: chartLabels[2],
+                      time: getTimeString(int.parse(
+                          dashBoardData[0].chartData.freeTime.total))),
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * .03,
+                  ),
+                  // Spacer(),
+                ],
+              ),
+              // child: ListView.builder(
+              //   itemCount: 3,
+              //   shrinkWrap: true,
+              //   physics: NeverScrollableScrollPhysics(),
+              //   scrollDirection: Axis.horizontal,
+              //   itemBuilder: (BuildContext context, int index) {
+              //     return Row(
+              //       crossAxisAlignment: CrossAxisAlignment.center,
+              //       mainAxisAlignment: MainAxisAlignment.center,
+              //       children: [
+              //         // Spacer(),
+              //         SizedBox(
+              //           width: MediaQuery.of(context).size.width * .03,
+              //         ),
+              //         DotIndicator(
+              //             color: chartColors[index],
+              //             label: chartLabels[index],
+              //             time: "50m"),
+              //         SizedBox(
+              //           width: MediaQuery.of(context).size.width * .03,
+              //         ),
+              //         // Spacer(),
+              //       ],
+              //     );
+              //   },
+              // ),
             ),
+          ),
+          Divider(color: Colors.grey.shade300),
+          SizedBox(
+            height: MediaQuery.of(context).size.width * .04,
+          ),
+          Text(
+            "Free-time Usage",
+            style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w500,
+                color: AppConstants.gradients[1],
+                fontFamily: "EuclidCircularB"),
+          ),
+          SizedBox(
+            height: MediaQuery.of(context).size.width * .10,
+          ),
+          Container(
+            width: MediaQuery.of(context).size.width,
+            child: Row(
+              children: [
+                Text(
+                  "Used",
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppConstants.gradients[1],
+                      fontFamily: "EuclidCircularB"),
+                ),
+                Spacer(),
+                Text(
+                  "Max",
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: AppConstants.gradients[1],
+                      fontFamily: "EuclidCircularB"),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: MediaQuery.of(context).size.width * .02,
+          ),
+          Container(
+            width: MediaQuery.of(context).size.width,
+            child: Row(
+              children: [
+                Text(
+                  getTimeString(
+                      int.parse(dashBoardData[0].chartData.freeTime.total)),
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      color: AppConstants.gradients[2],
+                      fontFamily: "EuclidCircularB"),
+                ),
+                Spacer(),
+                Text(
+                  getTimeString(int.parse(dashBoardData[0].freeTimeMaxUsage)),
+                  style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w600,
+                      color: AppConstants.gradients[1],
+                      fontFamily: "EuclidCircularB"),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: MediaQuery.of(context).size.width * .025,
+          ),
+          LinearPercentIndicator(
+            width: MediaQuery.of(context).size.width * 0.84,
+            animation: true,
+            lineHeight: MediaQuery.of(context).size.width * 0.05,
+            animationDuration: 1000,
+            percent: (double.parse(dashBoardData[0].chartData.freeTime.total) /
+                double.parse(dashBoardData[0].freeTimeMaxUsage)),
+            center: Text(""),
+            linearStrokeCap: LinearStrokeCap.roundAll,
+            progressColor: AppConstants.gradients[4],
+            backgroundColor: AppConstants.gradients[6],
+          ),
+          SizedBox(
+            height: MediaQuery.of(context).size.width * .06,
+          ),
+          CustomButton(
+              label: "Extend Free-time",
+              isDisabled: !select,
+              onPressed: () {
+                setState(() {
+                  select = false;
+                });
+              }),
+          SizedBox(
+            height: MediaQuery.of(context).size.width * .04,
+          ),
+          CustomButton(
+              label: "Change Time Restrictions",
+              isDisabled: select,
+              onPressed: () {
+                setState(() {
+                  select = true;
+                });
+              }),
+          SizedBox(
+            height: MediaQuery.of(context).size.width * .02,
+          ),
+          Divider(color: Colors.grey.shade300),
+          SizedBox(
+            height: MediaQuery.of(context).size.width * .04,
+          ),
+          Text(
+            "By Devices",
+            style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w500,
+                color: AppConstants.gradients[1],
+                fontFamily: "EuclidCircularB"),
+          ),
+          SizedBox(
+            height: MediaQuery.of(context).size.width * .10,
+          ),
+          DeviceTile(
+              image: "assets/images/mobile.svg",
+              type: "Phone",
+              time: getTimeString(
+                  int.parse(dashBoardData[0].deviceUsage.totalTime.mobile))),
+          SizedBox(
+            height: MediaQuery.of(context).size.width * .10,
+          ),
+          DeviceTile(
+              image: "assets/images/laptop.svg",
+              type: "Laptop",
+              time: getTimeString(
+                  int.parse(dashBoardData[0].deviceUsage.totalTime.laptop))),
+          SizedBox(
+            height: MediaQuery.of(context).size.width * .1,
+          ),
+          Text(
+            "See All Devices",
+            style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w400,
+                color: AppConstants.gradients[7],
+                fontFamily: "EuclidCircularB"),
+          ),
+          SizedBox(
+            height: MediaQuery.of(context).size.width * .10,
+          ),
+        ],
+      ),
     );
   }
 }
